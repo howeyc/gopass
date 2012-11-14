@@ -2,28 +2,38 @@
 
 package main
 
-/*
-#include <windows.h>
-#include <stdio.h>
+import "syscall"
+import "unsafe"
+import "unicode/utf16"
 
-unsigned char getch() {
-        unsigned char ch;
-        DWORD con_mode;
-        DWORD dwRead;
+func GetPass() []byte {
+	modkernel32 := syscall.NewLazyDLL("kernel32.dll")
+	procReadConsole := modkernel32.NewProc("ReadConsoleW")
+	procGetConsoleMode := modkernel32.NewProc("GetConsoleMode")
+	procSetConsoleMode := modkernel32.NewProc("SetConsoleMode")
 
-        HANDLE hIn=GetStdHandle(STD_INPUT_HANDLE);
+	var mode uint32
+	pMode := &mode
+	procGetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(unsafe.Pointer(pMode)))
 
-        GetConsoleMode( hIn, &con_mode );
-        SetConsoleMode( hIn, con_mode & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT) );
+	var echoMode uint32
+	echoMode = 4
+	var newMode uint32
+	newMode = mode ^ echoMode
 
-        ReadConsoleA( hIn, &ch, 1, &dwRead, NULL)
+	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(newMode))
 
-        SetConsoleMode( hIn, con_mode);
-        return ch;
-}
-*/
-import "C"
+	line := make([]uint16, 300)
+	pLine := &line[0]
+	var n uint16
+	procReadConsole.Call(uintptr(syscall.Stdin), uintptr(unsafe.Pointer(pLine)), uintptr(len(line)), uintptr(unsafe.Pointer(&n)))
+	if n > 0 {
+		n -= 2
+	}
 
-func getch() byte {
-	return byte(C.getch())
+	b := []byte(string(utf16.Decode(line[:n])))
+
+	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(mode))
+
+	return b
 }
