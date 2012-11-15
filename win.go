@@ -6,7 +6,9 @@ import "syscall"
 import "unsafe"
 import "unicode/utf16"
 
-func GetPass() []byte {
+// Returns password byte array read from terminal without input being echoed.
+// Array of bytes does not include end-of-line characters.
+func GetPasswd() []byte {
 	modkernel32 := syscall.NewLazyDLL("kernel32.dll")
 	procReadConsole := modkernel32.NewProc("ReadConsoleW")
 	procGetConsoleMode := modkernel32.NewProc("GetConsoleMode")
@@ -27,7 +29,9 @@ func GetPass() []byte {
 	pLine := &line[0]
 	var n uint16
 	procReadConsole.Call(uintptr(syscall.Stdin), uintptr(unsafe.Pointer(pLine)), uintptr(len(line)), uintptr(unsafe.Pointer(&n)))
-	if n > 0 {
+
+    // For some reason n returned seems to big by 2 (Null terminated maybe?)
+	if n > 2 {
 		n -= 2
 	}
 

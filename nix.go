@@ -28,19 +28,20 @@ func getch() byte {
 	return byte(C.getch())
 }
 
-func GetPass() []byte {
+// Returns password byte array read from terminal without input being echoed.
+// Array of bytes does not include end-of-line characters.
+func GetPasswd() []byte {
 	pass := make([]byte, 0)
 	for v := getch(); ; v = getch() {
-        if v == 127 || v == 8 {
-            if len(pass) > 0 {
-                pass = pass[:len(pass)-1]
-            }
-        } else if v == 13 || v == 10 {
-            break
-        } else {
-		    pass = append(pass, v)
-        }
+		if v == 127 || v == 8 {
+			if len(pass) > 0 {
+				pass = pass[:len(pass)-1]
+			}
+		} else if v == 13 || v == 10 {
+			break
+		} else {
+			pass = append(pass, v)
+		}
 	}
 	return pass
 }
-
