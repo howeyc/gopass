@@ -43,5 +43,6 @@ func GetPasswd() []byte {
 			pass = append(pass, v)
 		}
 	}
+	println()
 	return pass
 }
