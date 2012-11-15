@@ -1,6 +1,6 @@
 // +build freebsd openbsd netbsd darwin linux
 
-package main
+package gopass
 
 /*
 #include <termios.h>

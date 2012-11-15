@@ -1,6 +1,6 @@
 // +build windows
 
-package main
+package gopass
 
 import "syscall"
 import "unsafe"
