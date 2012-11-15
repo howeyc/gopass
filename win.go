@@ -39,5 +39,7 @@ func GetPasswd() []byte {
 
 	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(mode))
 
+    println()
+
 	return b
 }
