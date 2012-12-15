@@ -29,22 +29,8 @@ import "os"
 var secret = make([]byte, 0)
 var mask = byte('*')
 
-func getch() (password byte) {
-	password = byte(C.getch())
-
-	// Includes spaces A-Z a-z and special characters
-	// Delete * if backspace pressed
-	// TODO: Not allow spaces?
-	if password >= 32 && password <= 126 {
-		secret = append(secret, mask)
-		fmt.Print(string(mask))
-	} else if password == 127 || password == 8 {
-		if len(secret) > 0 {
-			secret = secret[:len(secret)-1]
-			os.Stdin.Write([]byte("\b \b"))
-		}
-	}
-	return
+func getch() byte {
+	return byte(C.getch())
 }
 
 // Returns password byte array read from terminal without input being echoed.
@@ -59,6 +45,31 @@ func GetPasswd() []byte {
 		} else if v == 13 || v == 10 {
 			break
 		} else {
+			pass = append(pass, v)
+		}
+	}
+	println()
+	return pass
+}
+
+// Masking password functionality
+// Removed character restrictions
+func GetPasswdMasked() []byte {
+	pass := make([]byte, 0)
+	for v := getch(); ; v = getch() {
+		if v == 127 || v == 8 {
+			if len(pass) > 0 {
+				pass = pass[:len(pass)-1]
+			}
+			if len(secret) > 0 {
+				secret = secret[:len(secret)-1]
+				os.Stdin.Write([]byte("\b \b"))
+			}
+		} else if v == 13 || v == 10 {
+			break
+		} else {
+			secret = append(secret, mask)
+			fmt.Print(string(mask))
 			pass = append(pass, v)
 		}
 	}
