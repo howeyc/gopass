@@ -23,9 +23,28 @@ int getch() {
 }
 */
 import "C"
+import "fmt"
+import "os"
 
-func getch() byte {
-	return byte(C.getch())
+var secret = make([]byte, 0)
+var mask = byte('*')
+
+func getch() (password byte) {
+	password = byte(C.getch())
+
+	// Includes spaces A-Z a-z and special characters
+	// Delete * if backspace pressed
+	// TODO: Not allow spaces?
+	if password >= 32 && password <= 126 {
+		secret = append(secret, mask)
+		fmt.Print(string(mask))
+	} else if password == 127 || password == 8 {
+		if len(secret) > 0 {
+			secret = secret[:len(secret)-1]
+			os.Stdin.Write([]byte("\b \b"))
+		}
+	}
+	return
 }
 
 // Returns password byte array read from terminal without input being echoed.
