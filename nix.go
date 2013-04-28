@@ -1,29 +1,23 @@
-// +build freebsd openbsd netbsd darwin linux
+// +build linux darwin
 
 package gopass
 
-/*
-#include <termios.h>
-#include <unistd.h>
-#include <stdio.h>
+import (
+	"syscall"
 
-int getch() {
-        int ch;
-        struct termios t_old, t_new;
-
-        tcgetattr(STDIN_FILENO, &t_old);
-        t_new = t_old;
-        t_new.c_lflag &= ~(ICANON | ECHO);
-        tcsetattr(STDIN_FILENO, TCSANOW, &t_new);
-
-        ch = getchar();
-
-        tcsetattr(STDIN_FILENO, TCSANOW, &t_old);
-        return ch;
-}
-*/
-import "C"
+	"code.google.com/p/go.crypto/ssh/terminal"
+)
 
 func getch() byte {
-	return byte(C.getch())
+	if oldState, err := terminal.MakeRaw(0); err != nil {
+		panic(err)
+	} else {
+		defer terminal.Restore(0, oldState)
+	}
+
+	var buf [1]byte
+	if n, err := syscall.Read(0, buf[:]); n == 0 || err != nil {
+		panic(err)
+	}
+	return buf[0]
 }
