@@ -1,3 +1,4 @@
+// Reads password from terminal.
 package gopass
 
 import (

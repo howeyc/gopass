@@ -6,8 +6,6 @@ import "syscall"
 import "unsafe"
 import "unicode/utf16"
 
-// Returns password byte array read from terminal without input being echoed.
-// Array of bytes does not include end-of-line characters.
 func getch() byte {
 	modkernel32 := syscall.NewLazyDLL("kernel32.dll")
 	procReadConsole := modkernel32.NewProc("ReadConsoleW")
