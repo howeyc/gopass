@@ -17,3 +17,5 @@ func main() {
     // Do something with pass
 }
 ```
+
+Caution: Multi-byte characters not supported!

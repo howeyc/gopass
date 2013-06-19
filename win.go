@@ -38,5 +38,10 @@ func getch() byte {
 
 	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(mode))
 
-	return b[0]
+	// Not sure how this could happen, but it did for someone
+	if len(b) > 0 {
+		return b[0]
+	} else {
+		return 13
+	}
 }
