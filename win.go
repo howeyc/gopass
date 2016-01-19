@@ -20,7 +20,7 @@ func getch() byte {
 	echoMode = 4
 	lineMode = 2
 	var newMode uint32
-	newMode = mode ^ (echoMode | lineMode)
+	newMode = mode &^ (echoMode | lineMode)
 
 	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(newMode))
 
