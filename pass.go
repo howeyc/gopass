@@ -27,6 +27,7 @@ func getPasswd(masked bool) []byte {
 			os.Stdout.Write(mask)
 		}
 	}
+	os.Stdout.WriteString(lineEnding)
 	println()
 	return pass
 }

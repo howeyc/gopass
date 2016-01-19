@@ -8,6 +8,8 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+const lineEnding = "\n"
+
 func getch() byte {
 	if oldState, err := terminal.MakeRaw(0); err != nil {
 		panic(err)

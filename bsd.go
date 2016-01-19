@@ -24,6 +24,8 @@ int getch() {
 */
 import "C"
 
+const lineEnding = "\n"
+
 func getch() byte {
 	return byte(C.getch())
 }
