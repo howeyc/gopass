@@ -1,6 +1,7 @@
 package gopass
 
 import (
+	"errors"
 	"os"
 )
 
@@ -20,7 +21,7 @@ func getPasswd(masked bool) ([]byte, error) {
 	}
 
 	for {
-		if v := getch(); v == 127 || v == 8 {
+		if v, e := getch(); v == 127 || v == 8 {
 			if l := len(pass); l > 0 {
 				pass = pass[:l-1]
 				os.Stdout.Write(bs)
@@ -33,10 +34,12 @@ func getPasswd(masked bool) ([]byte, error) {
 		} else if v != 0 {
 			pass = append(pass, v)
 			os.Stdout.Write(mask)
+		} else if e != nil {
+			err = e
+			break
 		}
 	}
 	os.Stdout.WriteString(lineEnding)
-	println()
 	return pass, err
 }
 
