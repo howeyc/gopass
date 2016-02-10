@@ -13,8 +13,14 @@ import "github.com/howeyc/gopass"
 
 func main() {
 	fmt.Printf("Password: ")
-	pass := gopass.GetPasswd() // Silent, for *'s use gopass.GetPasswdMasked()
-    // Do something with pass
+
+	// Silent. For printing *'s use gopass.GetPasswdMasked()
+	pass, err := gopass.GetPasswd()
+	if err != nil {
+		// Handle gopass.ErrInterrupted or getch() read error
+	}
+
+	// Do something with pass
 }
 ```
 
