@@ -47,7 +47,10 @@ func getPasswd(masked bool) ([]byte, error) {
 	}
 
 	for {
-		if v, e := getch(); v == 127 || v == 8 {
+		if v, e := getch(); e != nil {
+			err = e
+			break
+		} else if v == 127 || v == 8 {
 			if l := len(pass); l > 0 {
 				pass = pass[:l-1]
 				fmt.Print(string(bs))
@@ -60,9 +63,6 @@ func getPasswd(masked bool) ([]byte, error) {
 		} else if v != 0 {
 			pass = append(pass, v)
 			fmt.Print(string(mask))
-		} else if e != nil {
-			err = e
-			break
 		}
 	}
 	fmt.Println()
