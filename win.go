@@ -2,16 +2,12 @@
 
 package gopass
 
-import "errors"
 import "syscall"
 import "unsafe"
-import "unicode/utf16"
-
-const lineEnding = "\r\n"
 
 func getch() (byte, error) {
 	modkernel32 := syscall.NewLazyDLL("kernel32.dll")
-	procReadConsole := modkernel32.NewProc("ReadConsoleW")
+	procReadFile := modkernel32.NewProc("ReadFile")
 	procGetConsoleMode := modkernel32.NewProc("GetConsoleMode")
 	procSetConsoleMode := modkernel32.NewProc("SetConsoleMode")
 
@@ -28,17 +24,22 @@ func getch() (byte, error) {
 	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(newMode))
 	defer procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(mode))
 
-	line := make([]uint16, 1)
+	line := make([]byte, 1)
 	pLine := &line[0]
+	var result uintptr
+	var err error
 	var n uint16
-	procReadConsole.Call(uintptr(syscall.Stdin), uintptr(unsafe.Pointer(pLine)), uintptr(len(line)), uintptr(unsafe.Pointer(&n)))
+	for n < 1 {
+		result, _, err = procReadFile.Call(uintptr(syscall.Stdin),
+			uintptr(unsafe.Pointer(pLine)),
+			uintptr(len(line)),
+			uintptr(unsafe.Pointer(&n)),
+			uintptr(unsafe.Pointer(nil)))
+	}
 
-	b := []byte(string(utf16.Decode(line)))
-
-	// Not sure how this could happen, but it did for someone
-	if len(b) > 0 {
-		return b[0], nil
+	if result > 0 {
+		return line[0], nil
 	} else {
-		return 13, errors.New("Read error")
+		return 13, err
 	}
 }
