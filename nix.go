@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func getch() (byte, error) {
+var getch = func() (byte, error) {
 	if oldState, err := terminal.MakeRaw(0); err != nil {
 		return 0, err
 	} else {
