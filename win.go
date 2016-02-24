@@ -5,8 +5,6 @@ package gopass
 import "syscall"
 import "unsafe"
 
-const lineEnding = "\r\n"
-
 func getch() (byte, error) {
 	modkernel32 := syscall.NewLazyDLL("kernel32.dll")
 	procReadFile := modkernel32.NewProc("ReadFile")
