@@ -15,11 +15,12 @@ var getch = func() (byte, error) {
 	pMode := &mode
 	procGetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(unsafe.Pointer(pMode)))
 
-	var echoMode, lineMode uint32
+	var echoMode, lineMode, procMode uint32
 	echoMode = 4
 	lineMode = 2
+	procMode = 1
 	var newMode uint32
-	newMode = mode &^ (echoMode | lineMode)
+	newMode = mode &^ (echoMode | lineMode | procMode)
 
 	procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(newMode))
 	defer procSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(mode))
