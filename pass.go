@@ -2,7 +2,7 @@ package gopass
 
 import (
 	"errors"
-	"os"
+	"fmt"
 )
 
 var (
@@ -24,7 +24,7 @@ func getPasswd(masked bool) ([]byte, error) {
 		if v, e := getch(); v == 127 || v == 8 {
 			if l := len(pass); l > 0 {
 				pass = pass[:l-1]
-				os.Stdout.Write(bs)
+				fmt.Print(string(bs))
 			}
 		} else if v == 13 || v == 10 {
 			break
@@ -33,13 +33,13 @@ func getPasswd(masked bool) ([]byte, error) {
 			break
 		} else if v != 0 {
 			pass = append(pass, v)
-			os.Stdout.Write(mask)
+			fmt.Print(string(mask))
 		} else if e != nil {
 			err = e
 			break
 		}
 	}
-	os.Stdout.WriteString(lineEnding)
+	fmt.Println()
 	return pass, err
 }
 
