@@ -7,8 +7,6 @@ import "syscall"
 import "unsafe"
 import "unicode/utf16"
 
-const lineEnding = "\r\n"
-
 func getch() (byte, error) {
 	modkernel32 := syscall.NewLazyDLL("kernel32.dll")
 	procReadConsole := modkernel32.NewProc("ReadConsoleW")
