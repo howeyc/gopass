@@ -1,10 +1,14 @@
 package gopass
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 // TestGetPasswd tests the password creation and output based on a byte buffer
@@ -40,22 +44,12 @@ func TestGetPasswd(t *testing.T) {
 			"Nil byte should be ignored due; may get unintended nil bytes from syscalls on Windows."},
 	}
 
-	// getch methods normally refer to syscalls; replace with a byte buffer.
-	var input *bytes.Buffer
-	getch = func() (byte, error) {
-		b, err := input.ReadByte()
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-		return b, nil
-	}
-
 	// Redirecting output for tests as they print to os.Stdout but we want to
 	// capture and test the output.
 	origStdOut := os.Stdout
 	for _, masked := range []bool{true, false} {
 		for _, d := range ds {
-			input = bytes.NewBuffer(d.input)
+			pipeBytesToStdin(d.input)
 
 			r, w, err := os.Pipe()
 			if err != nil {
@@ -68,6 +62,7 @@ func TestGetPasswd(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error getting password:", err.Error())
 			}
+			leftOnBuffer := flushStdin()
 
 			// Test output (masked and unmasked).  Delete/backspace actually
 			// deletes, overwrites and deletes again.  As a result, we need to
@@ -92,9 +87,90 @@ func TestGetPasswd(t *testing.T) {
 				t.Errorf("Expected %q but got %q instead when masked=%v. %s", d.password, result, masked, d.reason)
 			}
 
-			if input.Len() != d.byesLeft {
-				t.Errorf("Expected %v bytes left on buffer but instead got %v when masked=%v. %s", d.byesLeft, input.Len(), masked, d.reason)
+			if leftOnBuffer != d.byesLeft {
+				t.Errorf("Expected %v bytes left on buffer but instead got %v when masked=%v. %s", d.byesLeft, leftOnBuffer, masked, d.reason)
 			}
 		}
 	}
+}
+
+// TestPipe ensures we get our expected pipe behavior.
+func TestPipe(t *testing.T) {
+	type testData struct {
+		input    string
+		password string
+		expError error
+	}
+	ds := []testData{
+		testData{"abc", "abc", io.EOF},
+		testData{"abc\n", "abc", nil},
+		testData{"abc\r", "abc", nil},
+		testData{"abc\r\n", "abc", nil},
+	}
+
+	for _, d := range ds {
+		_, err := pipeToStdin(d.input)
+		if err != nil {
+			t.Log("Error writing input to stdin:", err)
+			t.FailNow()
+		}
+		pass, err := GetPasswd()
+		if string(pass) != d.password {
+			t.Errorf("Expected %q but got %q instead.", d.password, string(pass))
+		}
+		if err != d.expError {
+			t.Errorf("Expected %v but got %q instead.", d.expError, err)
+		}
+	}
+}
+
+// flushStdin reads from stdin for .5 seconds to ensure no bytes are left on
+// the buffer.  Returns the number of bytes read.
+func flushStdin() int {
+	ch := make(chan byte)
+	go func(ch chan byte) {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			b, err := reader.ReadByte()
+			if err != nil { // Maybe log non io.EOF errors, if you want
+				close(ch)
+				return
+			}
+			ch <- b
+		}
+		close(ch)
+	}(ch)
+
+	numBytes := 0
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				return numBytes
+			}
+			numBytes++
+		case <-time.After(500 * time.Millisecond):
+			return numBytes
+		}
+	}
+	return numBytes
+}
+
+// pipeToStdin pipes the given string onto os.Stdin by replacing it with an
+// os.Pipe.  The write end of the pipe is closed so that EOF is read after the
+// final byte.
+func pipeToStdin(s string) (int, error) {
+	pipeReader, pipeWriter, err := os.Pipe()
+	if err != nil {
+		fmt.Println("Error getting os pipes:", err)
+		os.Exit(1)
+	}
+	os.Stdin = pipeReader
+	w, err := pipeWriter.WriteString(s)
+	pipeWriter.Close()
+	return w, err
+}
+
+func pipeBytesToStdin(b []byte) (int, error) {
+	return pipeToStdin(string(b))
 }

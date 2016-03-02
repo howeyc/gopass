@@ -3,10 +3,28 @@ package gopass
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+var defaultGetCh = func() (byte, error) {
+	buf := make([]byte, 1)
+	if n, err := os.Stdin.Read(buf); n == 0 || err != nil {
+		if err != nil {
+			return 0, err
+		}
+		return 0, io.EOF
+	}
+	return buf[0], nil
+}
 
 var (
 	ErrInterrupted = errors.New("Interrupted")
+
+	// Provide variable so that tests can provide a mock implementation.
+	getch = defaultGetCh
 )
 
 // getPasswd returns the input read from terminal.
@@ -18,6 +36,14 @@ func getPasswd(masked bool) ([]byte, error) {
 	if masked {
 		bs = []byte("\b \b")
 		mask = []byte("*")
+	}
+
+	if terminal.IsTerminal(int(os.Stdin.Fd())) {
+		if oldState, err := terminal.MakeRaw(int(os.Stdin.Fd())); err != nil {
+			return pass, err
+		} else {
+			defer terminal.Restore(int(os.Stdin.Fd()), oldState)
+		}
 	}
 
 	for {
