@@ -188,6 +188,7 @@ func TestGetPasswd_Err(t *testing.T) {
 		}
 		return b, nil
 	}
+	defer func() { getch = defaultGetCh }()
 
 	for input, expectedPassword := range map[string]string{"abc": "abc", "abzc": "ab"} {
 		inBuffer = bytes.NewBufferString(input)
@@ -197,6 +198,31 @@ func TestGetPasswd_Err(t *testing.T) {
 		}
 		if err == nil {
 			t.Errorf("Expected error to be returned.")
+		}
+	}
+}
+
+func TestMaxPasswordLength(t *testing.T) {
+	type testData struct {
+		input       []byte
+		expectedErr error
+
+		// Helper field to output in case of failure; rather than hundreds of
+		// bytes.
+		inputDesc string
+	}
+
+	ds := []testData{
+		testData{append(bytes.Repeat([]byte{'a'}, maxLength), '\n'), nil, fmt.Sprintf("%v 'a' bytes followed by a newline", maxLength)},
+		testData{append(bytes.Repeat([]byte{'a'}, maxLength+1), '\n'), ErrMaxLengthExceeded, fmt.Sprintf("%v 'a' bytes followed by a newline", maxLength+1)},
+		testData{append(bytes.Repeat([]byte{0x00}, maxLength+1), '\n'), ErrMaxLengthExceeded, fmt.Sprintf("%v 0x00 bytes followed by a newline", maxLength+1)},
+	}
+
+	for _, d := range ds {
+		pipeBytesToStdin(d.input)
+		_, err := GetPasswd()
+		if err != d.expectedErr {
+			t.Errorf("Expected error to be %v; isntead got %v from %v", d.expectedErr, err, d.inputDesc)
 		}
 	}
 }

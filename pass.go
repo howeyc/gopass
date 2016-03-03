@@ -21,7 +21,9 @@ var defaultGetCh = func() (byte, error) {
 }
 
 var (
-	ErrInterrupted = errors.New("Interrupted")
+	maxLength            = 512
+	ErrInterrupted       = errors.New("interrupted")
+	ErrMaxLengthExceeded = fmt.Errorf("maximum byte limit (%v) exceeded", maxLength)
 
 	// Provide variable so that tests can provide a mock implementation.
 	getch = defaultGetCh
@@ -46,7 +48,11 @@ func getPasswd(masked bool) ([]byte, error) {
 		}
 	}
 
-	for {
+	// Track total bytes read, not just bytes in the password.  This ensures any
+	// errors that might flood the console with nil or -1 bytes infinitely are
+	// capped.
+	var counter int
+	for counter = 0; counter <= maxLength; counter++ {
 		if v, e := getch(); e != nil {
 			err = e
 			break
@@ -65,6 +71,11 @@ func getPasswd(masked bool) ([]byte, error) {
 			fmt.Print(string(mask))
 		}
 	}
+
+	if counter > maxLength {
+		err = ErrMaxLengthExceeded
+	}
+
 	fmt.Println()
 	return pass, err
 }
