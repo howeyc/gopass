@@ -9,9 +9,23 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+var reader *os.File = nil
+
+func getReader() *os.File {
+	if reader == nil {
+		return os.Stdin
+	}
+	return reader
+}
+
+// Set the reader to use when GetPasswd* is called
+func SetReader(file *os.File) {
+	reader = file
+}
+
 var defaultGetCh = func() (byte, error) {
 	buf := make([]byte, 1)
-	if n, err := os.Stdin.Read(buf); n == 0 || err != nil {
+	if n, err := getReader().Read(buf); n == 0 || err != nil {
 		if err != nil {
 			return 0, err
 		}
@@ -40,11 +54,12 @@ func getPasswd(masked bool) ([]byte, error) {
 		mask = []byte("*")
 	}
 
-	if terminal.IsTerminal(int(os.Stdin.Fd())) {
-		if oldState, err := terminal.MakeRaw(int(os.Stdin.Fd())); err != nil {
+	fd := int(getReader().Fd())
+	if terminal.IsTerminal(fd) {
+		if oldState, err := terminal.MakeRaw(fd); err != nil {
 			return pass, err
 		} else {
-			defer terminal.Restore(int(os.Stdin.Fd()), oldState)
+			defer terminal.Restore(fd, oldState)
 		}
 	}
 
