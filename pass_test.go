@@ -55,7 +55,7 @@ func TestGetPasswd(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			result, err := getPasswd(masked, w)
+			result, err := getPasswd("", masked, os.Stdin, w)
 			if err != nil {
 				t.Errorf("Error getting password: %s", err.Error())
 			}
@@ -175,7 +175,7 @@ func pipeBytesToStdin(b []byte) (int, error) {
 // TestGetPasswd_Err tests errors are properly handled from getch()
 func TestGetPasswd_Err(t *testing.T) {
 	var inBuffer *bytes.Buffer
-	getch = func() (byte, error) {
+	getch = func(FdReader) (byte, error) {
 		b, err := inBuffer.ReadByte()
 		if err != nil {
 			return 13, err
