@@ -12,7 +12,7 @@ type FdReader interface {
 	Fd() uintptr
 }
 
-var defaultGetCh = func(r FdReader) (byte, error) {
+var defaultGetCh = func(r io.Reader) (byte, error) {
 	buf := make([]byte, 1)
 	if n, err := r.Read(buf); n == 0 || err != nil {
 		if err != nil {

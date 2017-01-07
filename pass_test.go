@@ -175,7 +175,7 @@ func pipeBytesToStdin(b []byte) (int, error) {
 // TestGetPasswd_Err tests errors are properly handled from getch()
 func TestGetPasswd_Err(t *testing.T) {
 	var inBuffer *bytes.Buffer
-	getch = func(FdReader) (byte, error) {
+	getch = func(io.Reader) (byte, error) {
 		b, err := inBuffer.ReadByte()
 		if err != nil {
 			return 13, err
