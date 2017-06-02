@@ -7,6 +7,30 @@ import (
 	"os"
 )
 
+// echoMode encodes various types of echoing behavior.
+type echoMode uint8
+
+const (
+	// echoModeNone performs no echoing.
+	echoModeNone echoMode = iota
+	// echoModeMask performs asterisk echoing.
+	echoModeMask
+	// echoModeEcho performs complete echoing.
+	echoModeEcho
+)
+
+// String implements Stringer for echoMode.
+func (m echoMode) String() string {
+	if m == echoModeNone {
+		return "none"
+	} else if m == echoModeMask {
+		return "mask"
+	} else if m == echoModeEcho {
+		return "echo"
+	}
+	return "unknown"
+}
+
 type FdReader interface {
 	io.Reader
 	Fd() uintptr
@@ -32,15 +56,16 @@ var (
 	getch = defaultGetCh
 )
 
-// getPasswd returns the input read from terminal.
-// If prompt is not empty, it will be output as a prompt to the user
-// If masked is true, typing will be matched by asterisks on the screen.
-// Otherwise, typing will echo nothing.
-func getPasswd(prompt string, masked bool, r FdReader, w io.Writer) ([]byte, error) {
+// getPasswd returns the input read from terminal. If prompt is not empty, it
+// will be output as a prompt to the user. This function echos according to the
+// mode specified.
+func getPasswd(prompt string, mode echoMode, r FdReader, w io.Writer) ([]byte, error) {
 	var err error
 	var pass, bs, mask []byte
-	if masked {
+	if mode == echoModeMask || mode == echoModeEcho {
 		bs = []byte("\b \b")
+	}
+	if mode == echoModeMask {
 		mask = []byte("*")
 	}
 
@@ -79,7 +104,11 @@ func getPasswd(prompt string, masked bool, r FdReader, w io.Writer) ([]byte, err
 			break
 		} else if v != 0 {
 			pass = append(pass, v)
-			fmt.Fprint(w, string(mask))
+			if mode == echoModeMask {
+				fmt.Fprint(w, string(mask))
+			} else if mode == echoModeEcho {
+				fmt.Fprint(w, string(v))
+			}
 		}
 	}
 
@@ -93,18 +122,28 @@ func getPasswd(prompt string, masked bool, r FdReader, w io.Writer) ([]byte, err
 // GetPasswd returns the password read from the terminal without echoing input.
 // The returned byte array does not include end-of-line characters.
 func GetPasswd() ([]byte, error) {
-	return getPasswd("", false, os.Stdin, os.Stdout)
+	return getPasswd("", echoModeNone, os.Stdin, os.Stdout)
 }
 
 // GetPasswdMasked returns the password read from the terminal, echoing asterisks.
 // The returned byte array does not include end-of-line characters.
 func GetPasswdMasked() ([]byte, error) {
-	return getPasswd("", true, os.Stdin, os.Stdout)
+	return getPasswd("", echoModeMask, os.Stdin, os.Stdout)
+}
+
+// GetPasswdEchoed returns the password read from the terminal, echoing input.
+// The returned byte array does not include end-of-line characters.
+func GetPasswdEchoed() ([]byte, error) {
+	return getPasswd("", echoModeEcho, os.Stdin, os.Stdout)
 }
 
 // GetPasswdPrompt prompts the user and returns the password read from the terminal.
 // If mask is true, then asterisks are echoed.
 // The returned byte array does not include end-of-line characters.
 func GetPasswdPrompt(prompt string, mask bool, r FdReader, w io.Writer) ([]byte, error) {
-	return getPasswd(prompt, mask, r, w)
+	mode := echoModeNone
+	if mask {
+		mode = echoModeMask
+	}
+	return getPasswd(prompt, mode, r, w)
 }

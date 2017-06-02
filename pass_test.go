@@ -18,35 +18,36 @@ func TestGetPasswd(t *testing.T) {
 		input []byte
 
 		// Due to how backspaces are written, it is easier to manually write
-		// each expected output for the masked cases.
+		// each expected output for the masked and echoed cases.
 		masked   string
+		echoed   string
 		password string
 		byesLeft int
 		reason   string
 	}
 
 	ds := []testData{
-		testData{[]byte("abc\n"), "***", "abc", 0, "Password parsing should stop at \\n"},
-		testData{[]byte("abc\r"), "***", "abc", 0, "Password parsing should stop at \\r"},
-		testData{[]byte("a\nbc\n"), "*", "a", 3, "Password parsing should stop at \\n"},
-		testData{[]byte("*!]|\n"), "****", "*!]|", 0, "Special characters shouldn't affect the password."},
+		testData{[]byte("abc\n"), "***", "abc", "abc", 0, "Password parsing should stop at \\n"},
+		testData{[]byte("abc\r"), "***", "abc", "abc", 0, "Password parsing should stop at \\r"},
+		testData{[]byte("a\nbc\n"), "*", "a", "a", 3, "Password parsing should stop at \\n"},
+		testData{[]byte("*!]|\n"), "****", "*!]|", "*!]|", 0, "Special characters shouldn't affect the password."},
 
-		testData{[]byte("abc\r\n"), "***", "abc", 1,
+		testData{[]byte("abc\r\n"), "***", "abc", "abc", 1,
 			"Password parsing should stop at \\r; Windows LINE_MODE should be unset so \\r is not converted to \\r\\n."},
 
-		testData{[]byte{'a', 'b', 'c', 8, '\n'}, "***\b \b", "ab", 0, "Backspace byte should remove the last read byte."},
-		testData{[]byte{'a', 'b', 127, 'c', '\n'}, "**\b \b*", "ac", 0, "Delete byte should remove the last read byte."},
-		testData{[]byte{'a', 'b', 127, 'c', 8, 127, '\n'}, "**\b \b*\b \b\b \b", "", 0, "Successive deletes continue to delete."},
-		testData{[]byte{8, 8, 8, '\n'}, "", "", 0, "Deletes before characters are noops."},
-		testData{[]byte{8, 8, 8, 'a', 'b', 'c', '\n'}, "***", "abc", 0, "Deletes before characters are noops."},
+		testData{[]byte{'a', 'b', 'c', 8, '\n'}, "***\b \b", "abc\b \b", "ab", 0, "Backspace byte should remove the last read byte."},
+		testData{[]byte{'a', 'b', 127, 'c', '\n'}, "**\b \b*", "ab\b \bc", "ac", 0, "Delete byte should remove the last read byte."},
+		testData{[]byte{'a', 'b', 127, 'c', 8, 127, '\n'}, "**\b \b*\b \b\b \b", "ab\b \bc\b \b\b \b", "", 0, "Successive deletes continue to delete."},
+		testData{[]byte{8, 8, 8, '\n'}, "", "", "", 0, "Deletes before characters are noops."},
+		testData{[]byte{8, 8, 8, 'a', 'b', 'c', '\n'}, "***", "abc", "abc", 0, "Deletes before characters are noops."},
 
-		testData{[]byte{'a', 'b', 0, 'c', '\n'}, "***", "abc", 0,
+		testData{[]byte{'a', 'b', 0, 'c', '\n'}, "***", "abc", "abc", 0,
 			"Nil byte should be ignored due; may get unintended nil bytes from syscalls on Windows."},
 	}
 
 	// Redirecting output for tests as they print to os.Stdout but we want to
 	// capture and test the output.
-	for _, masked := range []bool{true, false} {
+	for _, mode := range []echoMode{echoModeNone, echoModeMask, echoModeEcho} {
 		for _, d := range ds {
 			pipeBytesToStdin(d.input)
 
@@ -55,37 +56,41 @@ func TestGetPasswd(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			result, err := getPasswd("", masked, os.Stdin, w)
+			result, err := getPasswd("", mode, os.Stdin, w)
 			if err != nil {
 				t.Errorf("Error getting password: %s", err.Error())
 			}
 			leftOnBuffer := flushStdin()
 
-			// Test output (masked and unmasked).  Delete/backspace actually
-			// deletes, overwrites and deletes again.  As a result, we need to
-			// remove those from the pipe afterwards to mimic the console's
-			// interpretation of those bytes.
+			// Test output.  Delete/backspace actually deletes, overwrites and
+			// deletes again.  As a result, we need to remove those from the
+			// pipe afterwards to mimic the console's interpretation of those
+			// bytes.
 			w.Close()
 			output, err := ioutil.ReadAll(r)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
 			var expectedOutput []byte
-			if masked {
-				expectedOutput = []byte(d.masked)
-			} else {
+			if mode == echoModeNone {
 				expectedOutput = []byte("")
+			} else if mode == echoModeMask {
+				expectedOutput = []byte(d.masked)
+			} else if mode == echoModeEcho {
+				expectedOutput = []byte(d.echoed)
+			} else {
+				t.Errorf("Unhandled echo mode (%v)", mode)
 			}
 			if bytes.Compare(expectedOutput, output) != 0 {
-				t.Errorf("Expected output to equal %v (%q) but got %v (%q) instead when masked=%v. %s", expectedOutput, string(expectedOutput), output, string(output), masked, d.reason)
+				t.Errorf("Expected output to equal %v (%q) but got %v (%q) instead when mode=%v. %s", expectedOutput, string(expectedOutput), output, string(output), mode, d.reason)
 			}
 
 			if string(result) != d.password {
-				t.Errorf("Expected %q but got %q instead when masked=%v. %s", d.password, result, masked, d.reason)
+				t.Errorf("Expected %q but got %q instead when mode=%v. %s", d.password, result, mode, d.reason)
 			}
 
 			if leftOnBuffer != d.byesLeft {
-				t.Errorf("Expected %v bytes left on buffer but instead got %v when masked=%v. %s", d.byesLeft, leftOnBuffer, masked, d.reason)
+				t.Errorf("Expected %v bytes left on buffer but instead got %v when mode=%v. %s", d.byesLeft, leftOnBuffer, mode, d.reason)
 			}
 		}
 	}
