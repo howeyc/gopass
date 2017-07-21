@@ -12,15 +12,18 @@ import "fmt"
 import "github.com/howeyc/gopass"
 
 func main() {
+  var passwd gopass.Shadow
 	fmt.Printf("Password: ")
 
 	// Silent. For printing *'s use gopass.GetPasswdMasked()
-	pass, err := gopass.GetPasswd()
+	pass, err := passwd.ReadPasswd(), passwd.GetPasswd()
 	if err != nil {
 		// Handle gopass.ErrInterrupted or getch() read error
 	}
 
 	// Do something with pass
+
+  passwd.Clean()
 }
 ```
 
