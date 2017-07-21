@@ -126,7 +126,7 @@ func TestPipe(t *testing.T) {
 // flushStdin reads from stdin for .5 seconds to ensure no bytes are left on
 // the buffer.  Returns the number of bytes read.
 func flushStdin() int {
-	ch := new(chan byte)
+	ch := make(chan byte)
 	go func(ch chan byte) {
 		reader := bufio.NewReader(os.Stdin)
 		for {
