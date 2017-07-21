@@ -7,9 +7,21 @@ import (
 	"os"
 )
 
+type Passwd interface {
+	ReadPasswd() error
+	ReadPasswdMasked() error
+	ReadPasswdPrompt(prompt string, mask bool, r FdReader, w io.Writer) error
+	GetPasswd() []byte
+	Clean()
+}
+
 type FdReader interface {
 	io.Reader
 	Fd() uintptr
+}
+
+type Shadow struct {
+	chars []byte
 }
 
 var defaultGetCh = func(r io.Reader) (byte, error) {
@@ -90,21 +102,34 @@ func getPasswd(prompt string, masked bool, r FdReader, w io.Writer) ([]byte, err
 	return pass, err
 }
 
-// GetPasswd returns the password read from the terminal without echoing input.
+// ReadPasswd returns the password read from the terminal without echoing input.
 // The returned byte array does not include end-of-line characters.
-func GetPasswd() ([]byte, error) {
-	return getPasswd("", false, os.Stdin, os.Stdout)
+func (pass *Shadow) ReadPasswd() (err error) {
+	pass.chars, err = getPasswd("", false, os.Stdin, os.Stdout)
+	return err
 }
 
-// GetPasswdMasked returns the password read from the terminal, echoing asterisks.
+// ReadPasswdMasked returns the password read from the terminal, echoing asterisks.
 // The returned byte array does not include end-of-line characters.
-func GetPasswdMasked() ([]byte, error) {
-	return getPasswd("", true, os.Stdin, os.Stdout)
+func (pass *Shadow) ReadPasswdMasked() (err error) {
+	pass.chars, err = getPasswd("", true, os.Stdin, os.Stdout)
+	return err
 }
 
-// GetPasswdPrompt prompts the user and returns the password read from the terminal.
+// ReadPasswdPrompt prompts the user and returns the password read from the terminal.
 // If mask is true, then asterisks are echoed.
 // The returned byte array does not include end-of-line characters.
-func GetPasswdPrompt(prompt string, mask bool, r FdReader, w io.Writer) ([]byte, error) {
-	return getPasswd(prompt, mask, r, w)
+func (pass *Shadow) ReadPasswdPrompt(prompt string, mask bool, r FdReader, w io.Writer) (err error) {
+	pass.chars, err = getPasswd(prompt, mask, r, w)
+	return err
+}
+
+func (pass *Shadow) GetPasswd() []byte {
+	return pass.chars
+}
+
+func (pass *Shadow) Clean() {
+	for i := range pass.chars {
+		pass.chars[i] = 0
+	}
 }
