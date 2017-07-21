@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-type Passwd interface {
+type passwd interface {
 	ReadPasswd() error
 	ReadPasswdMasked() error
 	ReadPasswdPrompt(prompt string, mask bool, r FdReader, w io.Writer) error
