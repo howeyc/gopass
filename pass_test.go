@@ -111,7 +111,9 @@ func TestPipe(t *testing.T) {
 			t.Log("Error writing input to stdin:", err)
 			t.FailNow()
 		}
-		pass, err := GetPasswd()
+
+		passwd := new(Shadow)
+		err, pass := passwd.ReadPasswd(), passwd.GetPasswd()
 		if string(pass) != d.password {
 			t.Errorf("Expected %q but got %q instead.", d.password, string(pass))
 		}
@@ -189,7 +191,8 @@ func TestGetPasswd_Err(t *testing.T) {
 
 	for input, expectedPassword := range map[string]string{"abc": "abc", "abzc": "ab"} {
 		inBuffer = bytes.NewBufferString(input)
-		p, err := GetPasswdMasked()
+		passwd := new(Shadow)
+		err, p := passwd.ReadPasswdMasked(), passwd.GetPasswd()
 		if string(p) != expectedPassword {
 			t.Errorf("Expected %q but got %q instead.", expectedPassword, p)
 		}
@@ -217,7 +220,8 @@ func TestMaxPasswordLength(t *testing.T) {
 
 	for _, d := range ds {
 		pipeBytesToStdin(d.input)
-		_, err := GetPasswd()
+		passwd := new(Shadow)
+		err := passwd.ReadPasswd()
 		if err != d.expectedErr {
 			t.Errorf("Expected error to be %v; isntead got %v from %v", d.expectedErr, err, d.inputDesc)
 		}
