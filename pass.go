@@ -7,14 +7,6 @@ import (
 	"os"
 )
 
-type passwd interface {
-	ReadPasswd() error
-	ReadPasswdMasked() error
-	ReadPasswdPrompt(prompt string, mask bool, r FdReader, w io.Writer) error
-	GetPasswd() []byte
-	Clean()
-}
-
 type FdReader interface {
 	io.Reader
 	Fd() uintptr
@@ -100,6 +92,11 @@ func getPasswd(prompt string, masked bool, r FdReader, w io.Writer) ([]byte, err
 	}
 
 	return pass, err
+}
+
+func (pass *Shadow) StorePasswd(passw []byte) {
+	pass.Clean()
+	copy(pass.chars, passw)
 }
 
 // ReadPasswd returns the password read from the terminal without echoing input.
