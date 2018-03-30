@@ -13,11 +13,15 @@ func isTerminal(fd uintptr) bool {
 }
 
 func makeRaw(fd uintptr) (*terminalState, error) {
-	state, err := terminal.MakeRaw(int(fd))
+	state, err := terminal.GetState(int(fd))
+	if err != nil {
+		return nil, err
+	}
+	terminal.MakeRaw(int(fd))
 
 	return &terminalState{
 		state: state,
-	}, err
+	}, nil
 }
 
 func restore(fd uintptr, oldState *terminalState) error {
